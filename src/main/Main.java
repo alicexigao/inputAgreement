@@ -8,8 +8,8 @@ import java.util.Random;
 
 public class Main {
 
-	static int numObjects = 4;
-	static int numAttr = 2;
+	static int numObjects = 8;
+	static int numAttr = 3;
 	static double[][] prior = new double[numObjects][numObjects];
 	static Random rand = new Random();
 
@@ -18,29 +18,80 @@ public class Main {
 	static double eps = 0.000000000001;
 
 	public static void main(String[] args) {
-		prior = genProbDist(numObjects, numObjects);
+		prior = genPrior(numObjects, numObjects);
 		System.out.printf("prior: \n%s \n", toString2DDoubleArray(prior));
 
-		initAttr();
+		initializeAttributes();
 		System.out.printf("attributes: \n %s \n\n", toString2DIntArray(attr));
 
-		Map<Integer, Integer> aliceStrategy = new HashMap<Integer, Integer>();
-		getAliceStrategy();
+		Map<Integer, Integer> aliceStrategyStageOne = getAliceStrategyStageOne();
+		System.out.printf("Alice stage 1 strategy: %s", aliceStrategyStageOne.toString());
 		System.out.println();
 
-		getBoStrategy();
+//		int aliceReportAttrIndex = 0;
+//		int aliceReportAttrValue = 1;
+		
+		for (int aliceReportAttrIndex = 0; aliceReportAttrIndex < numAttr; aliceReportAttrIndex++) {
+			for (int aliceReportAttrValue = 0; aliceReportAttrValue < 2; aliceReportAttrValue++) {
+				Map<Integer, Integer> probDist = getDistOverObjs(aliceReportAttrIndex, aliceReportAttrValue, aliceStrategyStageOne);
+			}
+		}
+		Map<Integer, Integer> boStrategyStageOne = getBoStrategyStageOne();
+		System.out.printf("Bo stage 1 strategy: %s", boStrategyStageOne.toString());
 		System.out.println();
 	}
 
-	private static void getAliceStrategy() {
-
+	private static Map<Integer, Integer> getDistOverObjs(int aliceReportAttrIndex,
+			int aliceReportAttrValue, Map<Integer, Integer> aliceStrategyStageOne) {
 		
+		List<Integer> possibleObjects = new ArrayList<Integer>();
+		for (int i = 0; i < numObjects; i++) {
+			int attrIndex = aliceStrategyStageOne.get(i).intValue();
+			int attrValue = attr[i][attrIndex];
+			if (attrIndex == aliceReportAttrIndex && attrValue == aliceReportAttrValue) {
+				possibleObjects.add(i);
+			}
+		}
+		System.out.printf("attrIndex %d, attrValue %d, possibleObjs %s\n", 
+				aliceReportAttrIndex, aliceReportAttrValue, possibleObjects.toString());
+		return null;
+	}
+
+	private static void initializeAttributes() {
+		attr = new int[numObjects][numAttr];
+		
+		int attrValue = 0;
+		for (int objIndex = 0; objIndex < numObjects; objIndex++) {
+			String binaryAttrValue = Integer.toBinaryString(attrValue);
+			int length = binaryAttrValue.length();
+			while (length < 3) {
+				binaryAttrValue = "0" + binaryAttrValue;
+				length = binaryAttrValue.length();
+			}
+			for (int j = 0; j < binaryAttrValue.length(); j++) {
+				if (binaryAttrValue.charAt(j) == '1') {
+					attr[objIndex][j] = 1;
+				} else {
+					attr[objIndex][j] = 0;
+				}
+			}
+			
+			attrValue++;
+		}
+	}
+
+	private static Map<Integer, Integer> getAliceStrategyStageOne() {
+
+		Map<Integer, Integer> aliceStrategyStageOne = 
+				new HashMap<Integer, Integer>();
 		
 		for (int aliceObjIndex = 0; aliceObjIndex < numObjects; aliceObjIndex++) {
 
-			System.out.printf("Alice gets obj %d, ", aliceObjIndex);
-
-			double[] boProbCorrect = new double[] { 0.0, 0.0 };
+			
+			double[] boProbCorrect = new double[numAttr];
+			for (int i = 0; i < numAttr; i++) {
+				boProbCorrect[i] = 0.0;
+			}
 
 			for (int attrIndex = 0; attrIndex < numAttr; attrIndex++) {
 
@@ -69,25 +120,33 @@ public class Main {
 				// boProbCorrect[attrIndex]);
 			}
 
-			if (boProbCorrect[0] > boProbCorrect[1])
-				System.out.printf("Alice should report attr 0\n");
-			else if (boProbCorrect[0] < boProbCorrect[1])
-				System.out.printf("Alice should report attr 1\n");
-			else
-				System.out.printf("Alice should report attr 0 or 1\n");
-			// System.out.println();
-			// System.out.println();
-
+//			System.out.printf("Alice gets obj %d, ", aliceObjIndex);
+			if (boProbCorrect[0] > boProbCorrect[1]) {
+//				System.out.printf("Alice should report attr 0\n");
+				aliceStrategyStageOne.put(aliceObjIndex, 0);
+			} else if (boProbCorrect[0] < boProbCorrect[1]) {
+//				System.out.printf("Alice should report attr 1\n");
+				aliceStrategyStageOne.put(aliceObjIndex, 1);
+			} else {
+//				System.out.printf("Alice should report attr 0 or 1\n");
+				aliceStrategyStageOne.put(aliceObjIndex, 0);
+			}
 		}
+		
+		return aliceStrategyStageOne;
 	}
 
-	private static void getBoStrategy() {
-		for (int boboObjIndex = 0; boboObjIndex < numObjects; boboObjIndex++) {
+	private static Map<Integer, Integer> getBoStrategyStageOne() {
+		
+		Map<Integer, Integer> boStrategyStageOne = new HashMap<Integer, Integer>();
+		
+		for (int boObjIndex = 0; boObjIndex < numObjects; boObjIndex++) {
 
-			System.out.printf("Bo gets obj %d, ", boboObjIndex);
-
-			double[] aliceProbCorrect = new double[] { 0.0, 0.0 };
-
+			double[] aliceProbCorrect = new double[numAttr];
+			for (int i = 0; i < numAttr; i++) {
+				aliceProbCorrect[i] = 0.0;
+			}
+			
 			for (int attrIndex = 0; attrIndex < numAttr; attrIndex++) {
 
 				// System.out.printf("If Bo reports attr %d, ", attrIndex);
@@ -95,11 +154,11 @@ public class Main {
 				for (int aliceObjIndex = 0; aliceObjIndex < numObjects; aliceObjIndex++) {
 
 					double probAliceGivenBo = probOAGivenOB(aliceObjIndex,
-							boboObjIndex);
-					int attrValue = attr[boboObjIndex][attrIndex];
+							boObjIndex);
+					int attrValue = attr[boObjIndex][attrIndex];
 					String aliceDecision = getBoDecision(attrIndex, attrValue,
 							aliceObjIndex);
-					boolean aliceCorrect = boDecisionCorrect(boboObjIndex,
+					boolean aliceCorrect = boDecisionCorrect(boObjIndex,
 							attrIndex, aliceObjIndex);
 					// System.out.printf("With prob %.2f, Alice gets obj %d, says %s ",
 					// probAliceGivenBo, aliceObjIndex, aliceDecision);
@@ -116,16 +175,19 @@ public class Main {
 				// aliceProbCorrect[attrIndex]);
 			}
 
-			if (aliceProbCorrect[0] > aliceProbCorrect[1])
-				System.out.printf("Bo should report attr 0\n");
-			else if (aliceProbCorrect[0] < aliceProbCorrect[1])
-				System.out.printf("Bo should report attr 1\n");
-			else
-				System.out.printf("Bo should report attr 0 or 1\n");
-			// System.out.println();
-			// System.out.println();
-
+//			System.out.printf("Bo gets obj %d, ", boObjIndex);
+			if (aliceProbCorrect[0] > aliceProbCorrect[1]) {
+//				System.out.printf("Bo should report attr 0\n");
+				boStrategyStageOne.put(new Integer(boObjIndex), new Integer(0));
+			} else if (aliceProbCorrect[0] < aliceProbCorrect[1]) {
+//				System.out.printf("Bo should report attr 1\n");
+				boStrategyStageOne.put(new Integer(boObjIndex), new Integer(1));
+			} else {
+//				System.out.printf("Bo should report attr 0 or 1\n");
+				boStrategyStageOne.put(new Integer(boObjIndex), new Integer(0));
+			}
 		}
+		return boStrategyStageOne;
 	}
 
 	private static boolean boDecisionCorrect(int oa, int attrIndex, int ob) {
@@ -185,22 +247,7 @@ public class Main {
 		return total;
 	}
 
-	private static void initAttr() {
-		attr = new int[numObjects][numAttr];
-		attr[0][0] = 0;
-		attr[0][1] = 0;
-
-		attr[1][0] = 0;
-		attr[1][1] = 1;
-
-		attr[2][0] = 1;
-		attr[2][1] = 0;
-
-		attr[3][0] = 1;
-		attr[3][1] = 1;
-	}
-
-	private static double[][] genProbDist(int size, int innerSize) {
+	private static double[][] genPrior(int size, int innerSize) {
 		double[] temp = new double[size * innerSize];
 		double total = 0;
 		for (int i = 0; i < temp.length; i++) {
